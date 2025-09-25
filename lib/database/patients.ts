@@ -108,7 +108,38 @@ export async function createPatient(patientData: CreatePatientData): Promise<Pat
 export async function updatePatient(id: string, updates: Partial<Patient>): Promise<Patient> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase.from("patients").update(updates).eq("id", id).select().single()
+  // Sanitize and normalize updates to avoid DB errors (e.g., unsupported fields/types)
+  const allowedKeys = new Set([
+    "name",
+    "age",
+    "gender",
+    "phone",
+    "email",
+    "address",
+    "condition",
+    "medical_conditions",
+    "dietary_restrictions",
+    "current_medications",
+    "vata_percentage",
+    "pitta_percentage",
+    "kapha_percentage",
+    "current_vata",
+    "current_pitta",
+    "current_kapha",
+    "notes",
+    // Optional/extended columns if present in DB
+    "status",
+  ])
+
+  const normalized: Record<string, any> = {}
+  for (const [key, value] of Object.entries(updates)) {
+    if (!allowedKeys.has(key)) continue
+    if (value === undefined) continue
+    // date fields intentionally omitted to avoid schema mismatch
+    normalized[key] = value
+  }
+
+  const { data, error } = await supabase.from("patients").update(normalized).eq("id", id).select().single()
 
   if (error) {
     console.error("Error updating patient:", error)

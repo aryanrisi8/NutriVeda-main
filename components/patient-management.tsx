@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Plus, User, Calendar, Phone, Mail, MapPin, Edit, Eye } from "lucide-react"
+import { Search, Plus, User, Calendar, Phone, Mail, MapPin, Eye } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { PatientProfile } from "@/components/patient-profile"
 import { AddPatientForm } from "@/components/add-patient-form"
-import { type Patient, getAllPatients, getPatientStats, updatePatient } from "@/lib/database/patients"
+import { type Patient, getAllPatients, updatePatient } from "@/lib/database/patients"
 import { Input as TextInput } from "@/components/ui/input"
 
 interface PatientStats {
@@ -33,7 +33,22 @@ export function PatientManagement() {
 
   useEffect(() => {
     loadPatients()
-    loadStats()
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { id, status } = e.detail || {}
+      if (!id) return
+      setPatients((prev) => {
+        const next = prev.map((p) => (p.id === id ? { ...p, status } : p))
+        const inactive = next.filter((pp: any) => pp.status === "inactive").length
+        const active = next.length - inactive
+        setStats({ total: next.length, active, followUp: 0, dueToday: 0 })
+        return next
+      })
+    }
+    window.addEventListener('patient-status-updated', handler as any)
+    return () => window.removeEventListener('patient-status-updated', handler as any)
   }, [])
 
   const loadPatients = async () => {
@@ -41,6 +56,10 @@ export function PatientManagement() {
       setLoading(true)
       const data = await getAllPatients()
       setPatients(data)
+      // derive stats from loaded list: active = total - inactive
+      const inactive = data.filter((p: any) => p.status === "inactive").length
+      const active = data.length - inactive
+      setStats({ total: data.length, active, followUp: 0, dueToday: 0 })
     } catch (error) {
       console.error("Failed to load patients:", error)
     } finally {
@@ -48,19 +67,11 @@ export function PatientManagement() {
     }
   }
 
-  const loadStats = async () => {
-    try {
-      const statsData = await getPatientStats()
-      setStats(statsData)
-    } catch (error) {
-      console.error("Failed to load stats:", error)
-    }
-  }
+  // removed separate remote stats fetching; derived from current list
 
   const handlePatientAdded = () => {
     setShowAddPatient(false)
     loadPatients()
-    loadStats()
   }
 
   // scheduling moved to patient profile edit
@@ -98,6 +109,23 @@ export function PatientManagement() {
   }
 
   const uniqueConditions = [...new Set(patients.map((p) => p.condition).filter(Boolean))]
+
+  const togglePatientActive = async (p: Patient) => {
+    try {
+      const newStatus = p.status === "active" ? "inactive" : "active"
+      await updatePatient(p.id, { status: newStatus })
+      setPatients((prev) => {
+        const next = prev.map((x) => (x.id === p.id ? { ...x, status: newStatus } : x))
+        // recompute stats locally for snappy UI: active = total - inactive
+        const inactive = next.filter((pp: any) => pp.status === "inactive").length
+        const active = next.length - inactive
+        setStats({ total: next.length, active, followUp: 0, dueToday: 0 })
+        return next
+      })
+    } catch (e) {
+      console.error("Failed to toggle status", e)
+    }
+  }
 
   if (loading) {
     return (
@@ -173,8 +201,8 @@ export function PatientManagement() {
             </Select>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Stats: show only Total / Active / Inactive */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-3 bg-muted/30 rounded-lg">
               <div className="text-2xl font-bold text-primary">{stats.total}</div>
               <div className="text-sm text-muted-foreground">Total Patients</div>
@@ -184,12 +212,8 @@ export function PatientManagement() {
               <div className="text-sm text-muted-foreground">Active</div>
             </div>
             <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <div className="text-2xl font-bold text-warning">{stats.followUp}</div>
-              <div className="text-sm text-muted-foreground">Follow-up</div>
-            </div>
-            <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <div className="text-2xl font-bold text-secondary">{stats.dueToday}</div>
-              <div className="text-sm text-muted-foreground">Due Today</div>
+              <div className="text-2xl font-bold text-muted-foreground">{patients.filter((p) => p.status === "inactive").length}</div>
+              <div className="text-sm text-muted-foreground">Inactive</div>
             </div>
           </div>
         </div>
@@ -320,7 +344,7 @@ export function PatientManagement() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-2 items-center">
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button size="sm" className="flex-1" onClick={() => setSelectedPatient(patient)}>
@@ -335,12 +359,27 @@ export function PatientManagement() {
                       {selectedPatient && <PatientProfile patient={selectedPatient} />}
                     </DialogContent>
                   </Dialog>
-                  <Button size="sm" variant="outline">
-                    <Edit className="h-3 w-3" />
-                  </Button>
                   <Button size="sm" variant="outline" onClick={() => setSelectedPatient(patient)}>
                     <Calendar className="h-3 w-3" />
                   </Button>
+                  <div className="flex items-center gap-2 ml-auto text-xs">
+                    <span className="text-muted-foreground">Inactive</span>
+                    <button
+                      type="button"
+                      onClick={() => togglePatientActive(patient)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        patient.status === "active" ? "bg-primary" : "bg-muted"
+                      }`}
+                      aria-label="Toggle active status"
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-background transition-transform ${
+                          patient.status === "active" ? "translate-x-5" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className="text-muted-foreground">Active</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>

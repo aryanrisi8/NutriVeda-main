@@ -9,6 +9,7 @@ import { type Patient, updatePatient } from "@/lib/database/patients"
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { getMealPlansByPatient } from "@/lib/database/meal-plans"
 import type { MealPlan } from "@/lib/database/types"
 // Lazy-load in browser to avoid SSR import issues
@@ -21,6 +22,51 @@ async function ensurePdfLibs() {
   return { html2canvas, jsPDF: jsPDFMod.default }
 }
 
+// Provide a temporary CSS variables fallback to sRGB colors so html2canvas
+// does not try to parse unsupported oklch() values during rendering
+function injectColorFallbackStyle(): () => void {
+  const style = document.createElement('style')
+  style.setAttribute('data-oclr-fallback', 'true')
+  style.textContent = `:root {
+    --background: #ffffff;
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --popover: #ffffff;
+    --popover-foreground: #111827;
+    --primary: #2e7d32;
+    --primary-foreground: #f0fdf4;
+    --secondary: #d1fae5;
+    --secondary-foreground: #064e3b;
+    --muted: #f3f4f6;
+    --muted-foreground: #6b7280;
+    --accent: #a7f3d0;
+    --accent-foreground: #065f46;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e5e7eb;
+    --input: #e5e7eb;
+    --ring: #86efac;
+    --chart-1: #34d399;
+    --chart-2: #10b981;
+    --chart-3: #059669;
+    --chart-4: #65a30d;
+    --chart-5: #16a34a;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #111827;
+    --sidebar-primary: #2e7d32;
+    --sidebar-primary-foreground: #f0fdf4;
+    --sidebar-accent: #a7f3d0;
+    --sidebar-accent-foreground: #065f46;
+    --sidebar-border: #e5e7eb;
+    --sidebar-ring: #86efac;
+  }`
+  document.head.appendChild(style)
+  return () => {
+    try { document.head.removeChild(style) } catch {}
+  }
+}
+
 interface PatientProfileProps {
   patient: Patient
 }
@@ -31,6 +77,7 @@ export function PatientProfile({ patient }: PatientProfileProps) {
   const [form, setForm] = useState<Partial<Patient>>({})
   const [mealPlans, setMealPlans] = useState<MealPlan[]>([])
   const [generatedChart, setGeneratedChart] = useState<any | null>(null)
+  const [currentStatus, setCurrentStatus] = useState(patient.status || 'active')
 
   useEffect(() => {
     setForm({
@@ -48,6 +95,7 @@ export function PatientProfile({ patient }: PatientProfileProps) {
       dietary_restrictions: patient.dietary_restrictions ?? [],
       medical_conditions: patient.medical_conditions ?? [],
     })
+    setCurrentStatus(patient.status || 'active')
   }, [patient])
 
   useEffect(() => {
@@ -202,7 +250,29 @@ export function PatientProfile({ patient }: PatientProfileProps) {
             </div>
           </div>
         </div>
-        <div className="flex items-start">
+        <div className="flex items-start gap-4">
+          <div className="flex flex-col items-end">
+            <div className="text-xs text-muted-foreground mb-1">Active</div>
+            <Switch
+              checked={currentStatus === 'active'}
+              onCheckedChange={async (checked) => {
+                const status = checked ? 'active' : 'inactive'
+                try {
+                  // Update local state immediately for UI feedback
+                  setCurrentStatus(status)
+                  setForm((f) => ({ ...f, status } as any))
+                  await updatePatient(patient.id, { status })
+                  // broadcast to parent list so counts update without reload
+                  const evt = new CustomEvent('patient-status-updated', { detail: { id: patient.id, status } })
+                  window.dispatchEvent(evt)
+                } catch (e) {
+                  console.error('Failed to toggle patient status', e)
+                  // Revert on error
+                  setCurrentStatus(patient.status || 'active')
+                }
+              }}
+            />
+          </div>
           {editMode ? (
             <Button
               size="sm"
@@ -585,21 +655,44 @@ export function PatientProfile({ patient }: PatientProfileProps) {
                   const el = document.getElementById(`diet-chart-${patient.id}`)
                   if (!el) return
                   const { html2canvas, jsPDF } = await ensurePdfLibs()
-                  // Ensure a solid background to avoid oklch parsing issues
+                  // Temporarily reveal PDF-only patient details
+                  const detailsEl = document.getElementById(`pdf-details-${patient.id}`) as HTMLElement | null
+                  const wasHidden = detailsEl ? detailsEl.classList.contains('hidden') : false
+                  if (detailsEl && wasHidden) detailsEl.classList.remove('hidden')
+                  // Wait a frame so layout updates before snapshot
+                  await new Promise((r) => requestAnimationFrame(() => r(null)))
                   const originalBg = (el as HTMLElement).style.backgroundColor
+                  const removeFallback = injectColorFallbackStyle()
                   ;(el as HTMLElement).style.backgroundColor = '#ffffff'
-                  const canvas = await html2canvas(el as HTMLElement, {
-                    backgroundColor: '#ffffff',
-                    scale: 2,
-                    useCORS: true,
-                  })
-                  ;(el as HTMLElement).style.backgroundColor = originalBg
+                  let canvas: HTMLCanvasElement
+                  try {
+                    canvas = await html2canvas(el as HTMLElement, {
+                      backgroundColor: '#ffffff',
+                      scale: 2,
+                      useCORS: true,
+                    })
+                  } finally {
+                    ;(el as HTMLElement).style.backgroundColor = originalBg
+                    removeFallback()
+                    if (detailsEl && wasHidden) detailsEl.classList.add('hidden')
+                  }
                   const imgData = canvas.toDataURL('image/png')
                   const pdf = new jsPDF('p', 'mm', 'a4')
                   const imgProps = (pdf as any).getImageProperties(imgData)
-                  const pdfWidth = pdf.internal.pageSize.getWidth()
-                  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
-                  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+                  const pageWidth = pdf.internal.pageSize.getWidth()
+                  const pageHeight = pdf.internal.pageSize.getHeight()
+                  const margin = 12 // mm
+                  const maxWidth = pageWidth - margin * 2
+                  const maxHeight = pageHeight - margin * 2
+                  let renderWidth = maxWidth
+                  let renderHeight = (imgProps.height * renderWidth) / imgProps.width
+                  if (renderHeight > maxHeight) {
+                    renderHeight = maxHeight
+                    renderWidth = (imgProps.width * renderHeight) / imgProps.height
+                  }
+                  const x = (pageWidth - renderWidth) / 2
+                  const y = margin
+                  pdf.addImage(imgData, 'PNG', x, y, renderWidth, renderHeight)
                   pdf.save(`${patient.name}-diet-chart.pdf`)
                 }}
               >
@@ -608,6 +701,52 @@ export function PatientProfile({ patient }: PatientProfileProps) {
             </CardHeader>
             <CardContent>
               <div id={`diet-chart-${patient.id}`} className="space-y-3" style={{ backgroundColor: '#ffffff' }}>
+                {/* Printable Patient Details Header (PDF-only; shown only during export) */}
+                <div id={`pdf-details-${patient.id}`} className="p-4 border border-border rounded-md hidden">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="text-xl font-bold">Patient Details</div>
+                      <div className="text-xs text-muted-foreground">Generated on {new Date().toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-primary">{patient.name}</div>
+                      <div className="text-xs text-muted-foreground">{patient.condition || 'General Consultation'}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-muted-foreground">Age</div>
+                      <div className="col-span-2 font-medium">{patient.age ?? 'N/A'}</div>
+                      <div className="text-muted-foreground">Gender</div>
+                      <div className="col-span-2 font-medium">{patient.gender ?? 'N/A'}</div>
+                      <div className="text-muted-foreground">Phone</div>
+                      <div className="col-span-2 font-medium">{patient.phone ?? 'N/A'}</div>
+                      {patient.email && (
+                        <>
+                          <div className="text-muted-foreground">Email</div>
+                          <div className="col-span-2 font-medium">{patient.email}</div>
+                        </>
+                      )}
+                      {patient.address && (
+                        <>
+                          <div className="text-muted-foreground">Address</div>
+                          <div className="col-span-2 font-medium">{patient.address}</div>
+                        </>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-muted-foreground">Condition</div>
+                      <div className="col-span-2 font-medium">{patient.condition ?? 'N/A'}</div>
+                      <div className="text-muted-foreground">BMI</div>
+                      <div className="col-span-2 font-medium">{patient.bmi ?? 'N/A'} {patient.bmi ? `(${bmiInfo.category})` : ''}</div>
+                      <div className="text-muted-foreground">Last Visit</div>
+                      <div className="col-span-2 font-medium">{patient.last_visit ? new Date(patient.last_visit).toLocaleDateString() : 'N/A'}</div>
+                      <div className="text-muted-foreground">Next Appt.</div>
+                      <div className="col-span-2 font-medium">{patient.next_appointment ? new Date(patient.next_appointment).toLocaleDateString() : 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
                 {!generatedChart && (
                   <div className="text-sm text-muted-foreground">Generating chart...</div>
                 )}
