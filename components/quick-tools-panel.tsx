@@ -1,6 +1,7 @@
-import { Calculator, Compass, Sun, Droplets, Flame, Mountain, Plus, FileText } from "lucide-react"
+import { Calculator, Compass, Sun, Droplets, Flame, Mountain, Plus, FileText, Camera } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
 
 export function QuickToolsPanel() {
   return (
@@ -106,6 +107,12 @@ export function QuickToolsPanel() {
           <Button size="sm" variant="outline" className="w-full justify-start bg-transparent">
             <FileText className="h-4 w-4 mr-2" />
             Generate Report
+          </Button>
+          <Button size="sm" variant="outline" className="w-full justify-start bg-transparent" asChild>
+            <Link href="/protected/food-detection">
+              <Camera className="h-4 w-4 mr-2" />
+              AI Food Detection
+            </Link>
           </Button>
         </div>
       </div>
