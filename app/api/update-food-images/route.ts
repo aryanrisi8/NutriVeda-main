@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Update each food with an image URL
     for (const food of foodsWithoutImages) {
-      const imageUrl = await getEnhancedFoodImageUrl(food.name)
+      const imageUrl = getEnhancedFoodImageUrl(food.name)
       
       const { error: updateError } = await supabase
         .from('foods')

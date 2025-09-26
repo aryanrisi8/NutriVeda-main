@@ -104,8 +104,8 @@ async function addFoodToDatabase(foodData: FoodData): Promise<string | null> {
   try {
     const supabase = await createClient()
     
-    // Generate image URL for the food using Gemini
-    const imageUrl = await getEnhancedFoodImageUrl(foodData.name)
+    // Generate image URL for the food
+    const imageUrl = getEnhancedFoodImageUrl(foodData.name)
     
     const { data, error } = await supabase
       .from('foods')
