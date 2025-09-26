@@ -157,7 +157,7 @@ export function MainContent() {
 
             {/* Quick Access Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="medical-card p-6 hover:shadow-lg transition-shadow cursor-pointer">
+            <div className="bg-[#FCD7AD] text-foreground p-6 border border-border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                     <Users className="h-5 w-5 text-primary" />
@@ -172,10 +172,10 @@ export function MainContent() {
                 </Button>
               </div>
 
-              <div className="medical-card p-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="bg-[#F6C28B] text-foreground p-6 border border-border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-                    <Database className="h-5 w-5 text-secondary" />
+                  <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center">
+                    <Database className="h-5 w-5 text-accent" />
                   </div>
                   <h3 className="font-semibold text-foreground">Food Database</h3>
                 </div>
@@ -187,10 +187,10 @@ export function MainContent() {
                 </Button>
               </div>
 
-              <div className="medical-card p-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="bg-[#60935D] text-foreground p-6 border border-border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center">
-                    <Utensils className="h-5 w-5 text-accent" />
+                  <div className="h-10 w-10 rounded-full bg-foreground/20 flex items-center justify-center">
+                    <Utensils className="h-5 w-5 text-foreground" />
                   </div>
                   <h3 className="font-semibold text-foreground">Meal Planner</h3>
                 </div>
@@ -202,14 +202,14 @@ export function MainContent() {
                 </Button>
               </div>
 
-              <div className="medical-card p-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="bg-[#14342B] text-white p-6 border border-border rounded-lg hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
                     <BarChart3 className="h-5 w-5 text-success" />
                   </div>
-                  <h3 className="font-semibold text-foreground">Analytics</h3>
+                  <h3 className="font-semibold text-white">Analytics</h3>
                 </div>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-white mb-4">
                   View comprehensive nutrition and Ayurvedic compliance reports
                 </p>
                 <Button size="sm" variant="outline" className="w-full bg-transparent" asChild>

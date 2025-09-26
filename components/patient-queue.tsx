@@ -100,10 +100,10 @@ export function PatientQueue() {
           patients.map((patient) => (
             <div
               key={patient.id}
-              className="medical-card p-4 cursor-pointer hover:shadow-md transition-shadow"
+              className="p-4 cursor-pointer rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
               onClick={() => {
-                setSelectedPatient(patient)
-                setOpen(true)
+                setSelectedPatient(patient);
+                setOpen(true);
               }}
             >
               <div className="flex items-start justify-between mb-2">

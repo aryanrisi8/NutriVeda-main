@@ -380,48 +380,50 @@ export function MealPlanner() {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex h-[calc(100vh-200px)]">
           {/* Available Foods Sidebar */}
-          <div className="w-80 border-r border-border bg-surface p-4">
+          <div className="w-80 border-r border-border bg-accent p-4 flex flex-col h-full">
             <h3 className="text-lg font-semibold text-foreground mb-4">Available Foods</h3>
-            <Droppable droppableId="available-foods">
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`space-y-2 ${snapshot.isDraggingOver ? "bg-muted/50 rounded-lg p-2" : ""}`}
-                >
-                  {availableFoods.map((food, index) => (
-                    <Draggable key={food.id} draggableId={food.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={`medical-card p-3 cursor-grab active:cursor-grabbing ${
-                            snapshot.isDragging ? "shadow-lg rotate-2" : ""
-                          }`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h4 className="font-medium text-sm">{food.name}</h4>
-                              <p className="text-xs text-muted-foreground">{food.category}</p>
+            <div className="flex-1 overflow-y-auto">
+              <Droppable droppableId="available-foods">
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`space-y-2 ${snapshot.isDraggingOver ? "bg-muted/50 rounded-lg p-2" : ""}`}
+                  >
+                    {availableFoods.map((food, index) => (
+                      <Draggable key={food.id} draggableId={food.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={`medical-card p-3 cursor-grab active:cursor-grabbing ${
+                              snapshot.isDragging ? "shadow-lg rotate-2" : ""
+                            }`}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h4 className="font-medium text-sm">{food.name}</h4>
+                                <p className="text-xs text-muted-foreground">{food.category}</p>
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {food.calories_per_100g} cal
+                              </Badge>
                             </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {food.calories_per_100g} cal
-                            </Badge>
+                            <div className="flex gap-1">
+                              <Badge className={`text-xs ${getCompatibilityColor(food.vata_effect)}`}>V</Badge>
+                              <Badge className={`text-xs ${getCompatibilityColor(food.pitta_effect)}`}>P</Badge>
+                              <Badge className={`text-xs ${getCompatibilityColor(food.kapha_effect)}`}>K</Badge>
+                            </div>
                           </div>
-                          <div className="flex gap-1">
-                            <Badge className={`text-xs ${getCompatibilityColor(food.vata_effect)}`}>V</Badge>
-                            <Badge className={`text-xs ${getCompatibilityColor(food.pitta_effect)}`}>P</Badge>
-                            <Badge className={`text-xs ${getCompatibilityColor(food.kapha_effect)}`}>K</Badge>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </div>
           </div>
 
           {/* Meal Planning Area */}

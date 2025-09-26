@@ -2,41 +2,40 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-
 :root {
-  --background: #FCD7AD;
-  --foreground: #14342B;
-  --card: #FCD7AD;
-  --card-foreground: #14342B;
-  --popover: #FCD7AD;
-  --popover-foreground: #14342B;
-  --primary: #60935D;
-  --primary-foreground: #ffffff;
-  --secondary: #F6C28B;
-  --secondary-foreground: #14342B;
-  --muted: #FCD7AD;
-  --muted-foreground: #14342B;
-  --accent: #A57548;
-  --accent-foreground: #FCD7AD;
-  --destructive: #A57548;
-  --destructive-foreground: #ffffff;
-  --border: #A57548;
-  --input: #A57548;
-  --ring: #60935D;
-  --chart-1: #60935D;
-  --chart-2: #14342B;
-  --chart-3: #A57548;
-  --chart-4: #F6C28B;
-  --chart-5: #FCD7AD;
+  --background: hsl(35, 100%, 93%); /* A very light grey background */
+  --foreground: #14342B; /* Dark teal/green from original theme */
+  --card: white; /* Light orange/tan from original theme */
+  --card-foreground: #14342B; /* Dark teal/green */
+  --popover: white; /* Light orange/tan */
+  --popover-foreground: #14342B; /* Dark teal/green */
+  --primary: #60935D; /* Medium green from original theme */
+  --primary-foreground: #ffffff; /* White text for primary buttons */
+  --secondary: #F6C28B; /* Light orange from original theme */
+  --secondary-foreground: #14342B; /* Dark teal/green */
+  --muted: #FCD7AD; /* Light orange/tan */
+  --muted-foreground: #14342B; /* Dark teal/green */
+  --accent: #A57548; /* Warm brown from original theme */
+  --accent-foreground: #FCD7AD; /* Light orange/tan */
+  --destructive: #A57548; /* Warm brown */
+  --destructive-foreground: #ffffff; /* White text */
+  --border: #A57548; /* Warm brown */
+  --input: #A57548; /* Warm brown */
+  --ring: #60935D; /* Medium green */
+  --chart-1: #60935D; /* Medium green */
+  --chart-2: #14342B; /* Dark teal/green */
+  --chart-3: #A57548; /* Warm brown */
+  --chart-4: #F6C28B; /* Light orange */
+  --chart-5: #FCD7AD; /* Light orange/tan */
   --radius: 0.625rem;
-  --sidebar: #FCD7AD;
-  --sidebar-foreground: #14342B;
-  --sidebar-primary: #60935D;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #A57548;
-  --sidebar-accent-foreground: #FCD7AD;
-  --sidebar-border: #A57548;
-  --sidebar-ring: #60935D;
+  --sidebar: #FCD7AD; /* Light orange/tan */
+  --sidebar-foreground: #14342B; /* Dark teal/green */
+  --sidebar-primary: #60935D; /* Medium green */
+  --sidebar-primary-foreground: #ffffff; /* White text */
+  --sidebar-accent: #A57548; /* Warm brown */
+  --sidebar-accent-foreground: #FCD7AD; /* Light orange/tan */
+  --sidebar-border: #A57548; /* Warm brown */
+  --sidebar-ring: #60935D; /* Medium green */
 }
 
 @theme inline {

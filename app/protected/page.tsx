@@ -5,10 +5,10 @@ import { MainContent } from "@/components/main-content"
 
 export default function ProtectedDashboard() {
   return (
-    <DashboardLayout>
+    //<DashboardLayout>
       <div className="bg-background grid min-h-svh grid-cols-[minmax(16rem,20rem)_1fr_minmax(16rem,20rem)]">
         {/* Left Sidebar - Patient Queue */}
-        <aside className="border-r border-border bg-surface min-w-64 max-w-80 overflow-hidden">
+        <aside className="border-r border-border bg-accent min-w-64 max-w-80 overflow-hidden">
           <PatientQueue />
         </aside>
 
@@ -22,6 +22,6 @@ export default function ProtectedDashboard() {
           <QuickToolsPanel />
         </aside>
       </div>
-    </DashboardLayout>
+    //</DashboardLayout>
   )
 }
