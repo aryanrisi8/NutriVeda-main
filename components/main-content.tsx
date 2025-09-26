@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Plus, Calendar, BarChart3, Users, Database, Utensils, Target } from "lucide-react"
+import { Plus, Calendar, BarChart3, Users, Database, Utensils, Target, Camera } from "lucide-react"
 import Link from "next/link"
 import { getAllPatients, getPatientStats } from "@/lib/database/patients"
 import { getMealPlans } from "@/lib/database/meal-plans"
@@ -110,6 +110,12 @@ export function MainContent() {
               <Link href="/protected/patients">
                 <Plus className="h-4 w-4 mr-2" />
                 New Patient
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/protected/food-detection">
+                <Camera className="h-4 w-4 mr-2" />
+                AI Food Detection
               </Link>
             </Button>
             <Button variant="outline">

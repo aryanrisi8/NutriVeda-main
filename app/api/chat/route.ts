@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
+import { retrieveFoodContext, buildContextBlock } from "@/lib/rag/retriever"
 
-export const runtime = "edge"
+export const runtime = "nodejs"
 
 type ChatMessage = {
   role: "system" | "user" | "assistant"
@@ -26,12 +27,35 @@ export async function POST(req: Request) {
         "You are an expert Ayurvedic nutrition assistant. Be concise, practical, and supportive. When recommending foods, consider doshas (Vata, Pitta, Kapha) and standard nutrition."
     })
 
+    let userPrompt: string | undefined
     if (messages.length > 0) {
+      const lastUser = [...messages].reverse().find(m => m.role === "user")
+      userPrompt = lastUser?.content
       finalMessages.push(...messages)
     } else if (typeof userText === "string" && userText.trim().length > 0) {
-      finalMessages.push({ role: "user", content: userText.trim() })
+      userPrompt = userText.trim()
+      finalMessages.push({ role: "user", content: userPrompt })
     } else {
       return NextResponse.json({ error: "No messages provided" }, { status: 400 })
+    }
+
+    // RAG: retrieve context from Chroma
+    let ragContext = ""
+    try {
+      if (userPrompt) {
+        const chunks = await retrieveFoodContext(userPrompt, 5)
+        ragContext = buildContextBlock(chunks)
+      }
+    } catch (e) {
+      // Fallback silently if retrieval fails
+      ragContext = ""
+    }
+
+    if (ragContext) {
+      finalMessages.push({
+        role: "system",
+        content: `Use the following factual context to ground your answer. If relevant items are missing, say so and answer conservatively.\n\n${ragContext}`,
+      })
     }
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
