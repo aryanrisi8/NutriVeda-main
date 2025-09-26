@@ -1,118 +1,142 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Search, Filter, Plus, Leaf, Thermometer } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { type Food, getFoods, getFoodCategories, searchFoodsWithGemini } from "@/lib/database/foods"
+import { useState, useEffect } from "react";
+import { Search, Filter, Plus, Leaf, Thermometer } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  type Food,
+  getFoods,
+  getFoodCategories,
+  searchFoodsWithGemini,
+} from "@/lib/database/foods";
 
-const constitutions = ["All", "Vata", "Pitta", "Kapha"]
-const seasons = ["All", "Spring", "Summer", "Monsoon", "Autumn", "Winter"]
+const constitutions = ["All", "Vata", "Pitta", "Kapha"];
+const seasons = ["All", "Spring", "Summer", "Monsoon", "Autumn", "Winter"];
 
 export function FoodDatabase() {
-  const [foodItems, setFoodItems] = useState<Food[]>([])
-  const [categories, setCategories] = useState<string[]>(["All"])
-  const [loading, setLoading] = useState(true)
-  const [searching, setSearching] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All")
-  const [selectedConstitution, setSelectedConstitution] = useState("All")
-  const [selectedSeason, setSelectedSeason] = useState("All")
-  const [showFilters, setShowFilters] = useState(false)
+  const [foodItems, setFoodItems] = useState<Food[]>([]);
+  const [categories, setCategories] = useState<string[]>(["All"]);
+  const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedConstitution, setSelectedConstitution] = useState("All");
+  const [selectedSeason, setSelectedSeason] = useState("All");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    loadFoodItems()
-    loadCategories()
-  }, [])
+    loadFoodItems();
+    loadCategories();
+  }, []);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
-      handleSearch(searchTerm.trim())
+    if (e.key === "Enter" && searchTerm.trim()) {
+      handleSearch(searchTerm.trim());
     }
-  }
+  };
 
   const loadFoodItems = async () => {
     try {
-      setLoading(true)
-      const data = await getFoods()
-      setFoodItems(data)
+      setLoading(true);
+      const data = await getFoods();
+      setFoodItems(data);
     } catch (error) {
-      console.error("Failed to load food items:", error)
+      console.error("Failed to load food items:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const loadCategories = async () => {
     try {
-      const data = await getFoodCategories()
-      setCategories(["All", ...data])
+      const data = await getFoodCategories();
+      setCategories(["All", ...data]);
     } catch (error) {
-      console.error("Failed to load categories:", error)
+      console.error("Failed to load categories:", error);
     }
-  }
+  };
 
   const handleSearch = async (query: string) => {
-    if (!query.trim()) return
+    if (!query.trim()) return;
 
     try {
-      setSearching(true)
-      const searchResults = await searchFoodsWithGemini(query)
-      
+      setSearching(true);
+      const searchResults = await searchFoodsWithGemini(query);
+
       // Merge search results with existing food items (avoid duplicates)
-      setFoodItems(prevItems => {
-        const existingIds = new Set(prevItems.map(item => item.id))
-        const newItems = searchResults.filter(item => !existingIds.has(item.id))
-        return [...prevItems, ...newItems]
-      })
-      
+      setFoodItems((prevItems) => {
+        const existingIds = new Set(prevItems.map((item) => item.id));
+        const newItems = searchResults.filter(
+          (item) => !existingIds.has(item.id)
+        );
+        return [...prevItems, ...newItems];
+      });
+
       // Update categories if new ones were found
-      const newCategories = [...new Set([
-        ...categories.filter(cat => cat !== "All"),
-        ...searchResults.map(food => food.category)
-      ])]
-      setCategories(["All", ...newCategories])
+      const newCategories = [
+        ...new Set([
+          ...categories.filter((cat) => cat !== "All"),
+          ...searchResults.map((food) => food.category),
+        ]),
+      ];
+      setCategories(["All", ...newCategories]);
     } catch (error) {
-      console.error("Failed to search foods:", error)
+      console.error("Failed to search foods:", error);
     } finally {
-      setSearching(false)
+      setSearching(false);
     }
-  }
+  };
 
   const filteredFoods = foodItems.filter((food) => {
     const matchesSearch =
       food.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       food.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      food.benefits?.some((benefit: string) => benefit.toLowerCase().includes(searchTerm.toLowerCase()))
+      food.benefits?.some((benefit: string) =>
+        benefit.toLowerCase().includes(searchTerm.toLowerCase())
+      );
 
-    const matchesCategory = selectedCategory === "All" || food.category === selectedCategory
-    const matchesSeason = selectedSeason === "All" || (food.best_season && food.best_season.includes(selectedSeason))
+    const matchesCategory =
+      selectedCategory === "All" || food.category === selectedCategory;
+    const matchesSeason =
+      selectedSeason === "All" ||
+      (food.best_season && food.best_season.includes(selectedSeason));
 
-    let matchesConstitution = true
+    let matchesConstitution = true;
     if (selectedConstitution !== "All") {
-      const compatibilityKey = `${selectedConstitution.toLowerCase()}_effect` as keyof Food
-      const effect = food[compatibilityKey] as string
-      matchesConstitution = effect === "Decrease" || effect === "Neutral" || effect === "N/A"
+      const compatibilityKey =
+        `${selectedConstitution.toLowerCase()}_effect` as keyof Food;
+      const effect = food[compatibilityKey] as string;
+      matchesConstitution =
+        effect === "Decrease" || effect === "Neutral" || effect === "N/A";
     }
 
-    return matchesSearch && matchesCategory && matchesSeason && matchesConstitution
-  })
+    return (
+      matchesSearch && matchesCategory && matchesSeason && matchesConstitution
+    );
+  });
 
   const getCompatibilityColor = (effect: string | null) => {
     switch (effect) {
       case "Decrease":
-        return "text-success bg-success/10"
+        return "text-success bg-success/10";
       case "Neutral":
-        return "text-primary bg-primary/10"
+        return "text-primary bg-primary/10";
       case "Increase":
-        return "text-destructive bg-destructive/10"
+        return "text-destructive bg-destructive/10";
       default:
-        return "text-muted-foreground bg-muted/10"
+        return "text-muted-foreground bg-muted/10";
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -122,7 +146,7 @@ export function FoodDatabase() {
           <p className="text-muted-foreground">Loading food database...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -132,9 +156,12 @@ export function FoodDatabase() {
         <div className="p-6">
           <div className="mb-4">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-foreground">Food Database</h1>
+              <h1 className="text-2xl font-serif font-bold text-foreground">
+                Food Database
+              </h1>
               <p className="text-muted-foreground">
-                Discover foods with their Ayurvedic properties and nutritional values
+                Discover foods with their Ayurvedic properties and nutritional
+                values
               </p>
             </div>
           </div>
@@ -158,7 +185,11 @@ export function FoodDatabase() {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="bg-transparent">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="bg-transparent"
+              >
                 <Filter className="h-4 w-4 mr-2" />
                 Filters
               </Button>
@@ -167,8 +198,13 @@ export function FoodDatabase() {
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Category
+                  </label>
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={setSelectedCategory}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -183,8 +219,13 @@ export function FoodDatabase() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Dosha Effect</label>
-                  <Select value={selectedConstitution} onValueChange={setSelectedConstitution}>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Dosha Effect
+                  </label>
+                  <Select
+                    value={selectedConstitution}
+                    onValueChange={setSelectedConstitution}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -199,8 +240,13 @@ export function FoodDatabase() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">Season</label>
-                  <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    Season
+                  </label>
+                  <Select
+                    value={selectedSeason}
+                    onValueChange={setSelectedSeason}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -223,11 +269,16 @@ export function FoodDatabase() {
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredFoods.map((food) => (
-            <Card key={food.id} className="medical-card hover:shadow-lg transition-shadow cursor-pointer">
+            <Card
+              key={food.id}
+              className="medical-card hover:shadow-lg transition-shadow cursor-pointer"
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-lg font-medium">{food.name}</CardTitle>
+                    <CardTitle className="text-lg font-medium">
+                      {food.name}
+                    </CardTitle>
                     <Badge variant="secondary" className="mt-1">
                       {food.category}
                     </Badge>
@@ -242,11 +293,15 @@ export function FoodDatabase() {
                 {/* Nutrition Info */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className="font-medium text-foreground">{food.calories_per_100g || 0}</div>
+                    <div className="font-medium text-foreground">
+                      {food.calories_per_100g || 0}
+                    </div>
                     <div className="text-muted-foreground">Calories</div>
                   </div>
                   <div className="text-center p-2 bg-muted/30 rounded">
-                    <div className="font-medium text-foreground">{food.protein_g || 0}g</div>
+                    <div className="font-medium text-foreground">
+                      {food.protein_g || 0}g
+                    </div>
                     <div className="text-muted-foreground">Protein</div>
                   </div>
                 </div>
@@ -262,7 +317,9 @@ export function FoodDatabase() {
                       {food.rasa && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Rasa:</span>
-                          <span className="text-foreground">{food.rasa.join(', ')}</span>
+                          <span className="text-foreground">
+                            {food.rasa.join(", ")}
+                          </span>
                         </div>
                       )}
                       {food.virya && (
@@ -280,15 +337,29 @@ export function FoodDatabase() {
 
                 {/* Constitution Compatibility */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-foreground">Dosha Effects</h4>
+                  <h4 className="text-sm font-medium text-foreground">
+                    Dosha Effects
+                  </h4>
                   <div className="flex gap-1">
-                    <Badge className={`text-xs ${getCompatibilityColor(food.vata_effect)}`}>
+                    <Badge
+                      className={`text-xs ${getCompatibilityColor(
+                        food.vata_effect
+                      )}`}
+                    >
                       V: {food.vata_effect || "N/A"}
                     </Badge>
-                    <Badge className={`text-xs ${getCompatibilityColor(food.pitta_effect)}`}>
+                    <Badge
+                      className={`text-xs ${getCompatibilityColor(
+                        food.pitta_effect
+                      )}`}
+                    >
                       P: {food.pitta_effect || "N/A"}
                     </Badge>
-                    <Badge className={`text-xs ${getCompatibilityColor(food.kapha_effect)}`}>
+                    <Badge
+                      className={`text-xs ${getCompatibilityColor(
+                        food.kapha_effect
+                      )}`}
+                    >
                       K: {food.kapha_effect || "N/A"}
                     </Badge>
                   </div>
@@ -297,13 +368,21 @@ export function FoodDatabase() {
                 {/* Benefits */}
                 {food.benefits && food.benefits.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-foreground">Key Benefits</h4>
+                    <h4 className="text-sm font-medium text-foreground">
+                      Key Benefits
+                    </h4>
                     <div className="flex flex-wrap gap-1">
-                      {food.benefits.slice(0, 3).map((benefit: string, index: number) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {benefit}
-                        </Badge>
-                      ))}
+                      {food.benefits
+                        .slice(0, 3)
+                        .map((benefit: string, index: number) => (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {benefit}
+                          </Badge>
+                        ))}
                     </div>
                   </div>
                 )}
@@ -319,18 +398,17 @@ export function FoodDatabase() {
         {filteredFoods.length === 0 && !searching && (
           <div className="text-center py-12">
             <div className="text-muted-foreground mb-2">
-              {searchTerm.trim() 
-                ? "Try adjusting your search or filters" 
-                : "No foods found matching your criteria"
-              }
+              {searchTerm.trim()
+                ? "Try adjusting your search or filters"
+                : "No foods found matching your criteria"}
             </div>
             <Button
               variant="outline"
               onClick={() => {
-                setSearchTerm("")
-                setSelectedCategory("All")
-                setSelectedConstitution("All")
-                setSelectedSeason("All")
+                setSearchTerm("");
+                setSelectedCategory("All");
+                setSelectedConstitution("All");
+                setSelectedSeason("All");
               }}
             >
               Clear Filters
@@ -346,5 +424,5 @@ export function FoodDatabase() {
         )}
       </div>
     </div>
-  )
+  );
 }

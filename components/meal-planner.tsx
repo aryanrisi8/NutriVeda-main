@@ -1,29 +1,50 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
-import { Plus, Trash2, Clock, Users, Calculator, Save, FileText, AlertCircle, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { getFoods, searchFoodsWithGemini } from "@/lib/database/foods"
-import type { Food } from "@/lib/database/types"
-import { getAllPatients, type Patient } from "@/lib/database/patients"
-import { createMealPlan } from "@/lib/database/meal-plans"
-import { useToast } from "@/hooks/use-toast"
-import { Skeleton } from "@/components/ui/skeleton"
-import type { FoodItem as MealPlanFoodItem } from "@/lib/database/types"
+import { useState, useEffect } from "react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd";
+import {
+  Plus,
+  Trash2,
+  Clock,
+  Users,
+  Calculator,
+  Save,
+  FileText,
+  AlertCircle,
+  Search,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { getFoods, searchFoodsWithGemini } from "@/lib/database/foods";
+import type { Food } from "@/lib/database/types";
+import { getAllPatients, type Patient } from "@/lib/database/patients";
+import { createMealPlan } from "@/lib/database/meal-plans";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { FoodItem as MealPlanFoodItem } from "@/lib/database/types";
 
 interface MealSlot {
-  id: string
-  name: string
-  time: string
-  foods: Food[]
-  targetCalories: number
+  id: string;
+  name: string;
+  time: string;
+  foods: Food[];
+  targetCalories: number;
 }
 
 const initialMeals: MealSlot[] = [
@@ -48,238 +69,255 @@ const initialMeals: MealSlot[] = [
     foods: [],
     targetCalories: 500,
   },
-]
+];
 
 export function MealPlanner() {
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
-  const [availableFoods, setAvailableFoods] = useState<Food[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [meals, setMeals] = useState<MealSlot[]>(initialMeals)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [searching, setSearching] = useState(false)
-  const [searchResults, setSearchResults] = useState<Food[]>([])
-  const { toast } = useToast()
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [availableFoods, setAvailableFoods] = useState<Food[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [meals, setMeals] = useState<MealSlot[]>(initialMeals);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Food[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [patientsData, foodsData] = await Promise.all([getAllPatients(), getFoods()])
-        setPatients(patientsData)
-        setAvailableFoods(foodsData)
+        const [patientsData, foodsData] = await Promise.all([
+          getAllPatients(),
+          getFoods(),
+        ]);
+        setPatients(patientsData);
+        setAvailableFoods(foodsData);
       } catch (e) {
-        setError("Failed to load data for meal planner.")
+        setError("Failed to load data for meal planner.");
         toast({
           title: "Error",
           description: "Failed to load meal planner data from the database.",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    fetchData()
-  }, [toast])
+    fetchData();
+  }, [toast]);
 
   const handlePatientSelect = (patientId: string) => {
-    const patient = patients.find(p => p.id === patientId)
-    setSelectedPatient(patient || null)
-  }
+    const patient = patients.find((p) => p.id === patientId);
+    setSelectedPatient(patient || null);
+  };
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return
+    if (!searchTerm.trim()) return;
 
     try {
-      setSearching(true)
-      const results = await searchFoodsWithGemini(searchTerm.trim())
-      
+      setSearching(true);
+      const results = await searchFoodsWithGemini(searchTerm.trim());
+
       // Set search results for display
-      setSearchResults(results)
-      
+      setSearchResults(results);
+
       if (results.length > 0) {
         toast({
-          title: "Search Complete", 
+          title: "Search Complete",
           description: `Found ${results.length} food item(s). Click to add to available foods.`,
-        })
+        });
       } else {
         toast({
           title: "No Results",
           description: "No food items found for your search",
           variant: "destructive",
-        })
+        });
       }
     } catch (error) {
-      console.error("Failed to search foods:", error)
+      console.error("Failed to search foods:", error);
       toast({
         title: "Search Failed",
         description: "Unable to search for foods. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setSearching(false)
+      setSearching(false);
     }
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
-      handleSearch()
+    if (e.key === "Enter" && searchTerm.trim()) {
+      handleSearch();
     }
-  }
+  };
 
   const addFoodFromSearch = (food: Food) => {
     // Check if food already exists in available foods
-    const exists = availableFoods.some(item => item.id === food.id)
+    const exists = availableFoods.some((item) => item.id === food.id);
     if (!exists) {
-      setAvailableFoods(prev => [...prev, food])
+      setAvailableFoods((prev) => [...prev, food]);
     }
-    
+
     // Remove from search results after adding
-    setSearchResults(prev => prev.filter(item => item.id !== food.id))
-    
+    setSearchResults((prev) => prev.filter((item) => item.id !== food.id));
+
     toast({
       title: "Food Added",
       description: `${food.name} has been added to available foods`,
-    })
-  }
+    });
+  };
 
   const clearSearchResults = () => {
-    setSearchResults([])
-    setSearchTerm("")
-  }
+    setSearchResults([]);
+    setSearchTerm("");
+  };
 
   const handleDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result
+    const { destination, source, draggableId } = result;
 
-    if (!destination) return
+    if (!destination) return;
 
     // If dropped in the same position
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
-      return
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
     }
 
     // Find the food item being dragged
-    const draggedFood = availableFoods.find((food) => food.id === draggableId)
-    if (!draggedFood) return
+    const draggedFood = availableFoods.find((food) => food.id === draggableId);
+    if (!draggedFood) return;
 
     // If dropping from food list to meal slot
-    if (source.droppableId === "available-foods" && destination.droppableId !== "available-foods") {
-      const targetMealId = destination.droppableId
+    if (
+      source.droppableId === "available-foods" &&
+      destination.droppableId !== "available-foods"
+    ) {
+      const targetMealId = destination.droppableId;
       const newMeals = meals.map((meal) => {
         if (meal.id === targetMealId) {
-          const newFoods = [...meal.foods]
+          const newFoods = [...meal.foods];
           // Store the full food object in the meal slot
-          newFoods.splice(destination.index, 0, draggedFood)
-          return { ...meal, foods: newFoods }
+          newFoods.splice(destination.index, 0, draggedFood);
+          return { ...meal, foods: newFoods };
         }
-        return meal
-      })
-      setMeals(newMeals)
+        return meal;
+      });
+      setMeals(newMeals);
     }
 
     // If moving within meal slots or between meal slots
-    if (source.droppableId !== "available-foods" && destination.droppableId !== "available-foods") {
-      const sourceMealId = source.droppableId
-      const destMealId = destination.droppableId
+    if (
+      source.droppableId !== "available-foods" &&
+      destination.droppableId !== "available-foods"
+    ) {
+      const sourceMealId = source.droppableId;
+      const destMealId = destination.droppableId;
 
       if (sourceMealId === destMealId) {
         // Moving within the same meal
-        const meal = meals.find((m) => m.id === sourceMealId)
+        const meal = meals.find((m) => m.id === sourceMealId);
         if (meal) {
-          const newFoods = [...meal.foods]
-          const [removed] = newFoods.splice(source.index, 1)
-          newFoods.splice(destination.index, 0, removed)
+          const newFoods = [...meal.foods];
+          const [removed] = newFoods.splice(source.index, 1);
+          newFoods.splice(destination.index, 0, removed);
 
-          const newMeals = meals.map((m) => (m.id === sourceMealId ? { ...m, foods: newFoods } : m))
-          setMeals(newMeals)
+          const newMeals = meals.map((m) =>
+            m.id === sourceMealId ? { ...m, foods: newFoods } : m
+          );
+          setMeals(newMeals);
         }
       } else {
         // Moving between different meals
-        const sourceMeal = meals.find((m) => m.id === sourceMealId)
-        const destMeal = meals.find((m) => m.id === destMealId)
+        const sourceMeal = meals.find((m) => m.id === sourceMealId);
+        const destMeal = meals.find((m) => m.id === destMealId);
 
         if (sourceMeal && destMeal) {
-          const sourceFoods = [...sourceMeal.foods]
-          const destFoods = [...destMeal.foods]
-          const [removed] = sourceFoods.splice(source.index, 1)
-          destFoods.splice(destination.index, 0, removed)
+          const sourceFoods = [...sourceMeal.foods];
+          const destFoods = [...destMeal.foods];
+          const [removed] = sourceFoods.splice(source.index, 1);
+          destFoods.splice(destination.index, 0, removed);
 
           const newMeals = meals.map((m) => {
-            if (m.id === sourceMealId) return { ...m, foods: sourceFoods }
-            if (m.id === destMealId) return { ...m, foods: destFoods }
-            return m
-          })
-          setMeals(newMeals)
+            if (m.id === sourceMealId) return { ...m, foods: sourceFoods };
+            if (m.id === destMealId) return { ...m, foods: destFoods };
+            return m;
+          });
+          setMeals(newMeals);
         }
       }
     }
-  }
+  };
 
   const removeFoodFromMeal = (mealId: string, foodIndex: number) => {
     const newMeals = meals.map((meal) => {
       if (meal.id === mealId) {
-        const newFoods = meal.foods.filter((_, index) => index !== foodIndex)
-        return { ...meal, foods: newFoods }
+        const newFoods = meal.foods.filter((_, index) => index !== foodIndex);
+        return { ...meal, foods: newFoods };
       }
-      return meal
-    })
-    setMeals(newMeals)
-  }
+      return meal;
+    });
+    setMeals(newMeals);
+  };
 
   const handleSavePlan = async () => {
     if (!selectedPatient) {
       toast({
         title: "No Patient Selected",
         description: "Please select a patient to save the meal plan.",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
       return;
     }
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // Convert the full food objects into the simplified MealPlanFoodItem format
-      const mealsToSave: Record<string, MealPlanFoodItem[]> = meals.reduce((acc, meal) => {
-        acc[meal.id] = meal.foods.map(food => ({
-          food_id: food.id,
-          food_name: food.name,
-          quantity_g: 100,
-          calories: food.calories_per_100g || 0,
-          protein_g: food.protein_g || 0,
-          carbs_g: food.carbs_g || 0,
-          fat_g: food.fat_g || 0,
-        }))
-        return acc
-      }, {} as Record<string, MealPlanFoodItem[]>)
+      const mealsToSave: Record<string, MealPlanFoodItem[]> = meals.reduce(
+        (acc, meal) => {
+          acc[meal.id] = meal.foods.map((food) => ({
+            food_id: food.id,
+            food_name: food.name,
+            quantity_g: 100,
+            calories: food.calories_per_100g || 0,
+            protein_g: food.protein_g || 0,
+            carbs_g: food.carbs_g || 0,
+            fat_g: food.fat_g || 0,
+          }));
+          return acc;
+        },
+        {} as Record<string, MealPlanFoodItem[]>
+      );
 
       const mealPlanData = {
         patient_id: selectedPatient.id,
         plan_name: `Diet Plan for ${new Date().toLocaleDateString()}`,
-        plan_date: new Date().toISOString().split('T')[0],
+        plan_date: new Date().toISOString().split("T")[0],
         breakfast_foods: mealsToSave.breakfast || [],
         lunch_foods: mealsToSave.lunch || [],
         dinner_foods: mealsToSave.dinner || [],
         snacks_foods: mealsToSave.snacks || [],
         notes: "Generated by Meal Planner",
-      }
+      };
 
-      await createMealPlan(mealPlanData)
+      await createMealPlan(mealPlanData);
       toast({
         title: "Success!",
         description: "Meal plan saved successfully.",
-      })
+      });
     } catch (e) {
-      setError("Failed to save meal plan.")
+      setError("Failed to save meal plan.");
       toast({
         title: "Error",
         description: "Failed to save the meal plan.",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const calculateMealNutrition = (foods: Food[]) => {
     return foods.reduce(
@@ -289,83 +327,87 @@ export function MealPlanner() {
         carbs: acc.carbs + (food.carbs_g || 0),
         fat: acc.fat + (food.fat_g || 0),
       }),
-      { calories: 0, protein: 0, carbs: 0, fat: 0 },
-    )
-  }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  };
 
   const calculateDayNutrition = () => {
     return meals.reduce(
       (acc, meal) => {
-        const mealNutrition = calculateMealNutrition(meal.foods)
+        const mealNutrition = calculateMealNutrition(meal.foods);
         return {
           calories: acc.calories + mealNutrition.calories,
           protein: acc.protein + mealNutrition.protein,
           carbs: acc.carbs + mealNutrition.carbs,
           fat: acc.fat + mealNutrition.fat,
-        }
+        };
       },
-      { calories: 0, protein: 0, carbs: 0, fat: 0 },
-    )
-  }
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  };
 
   const getCompatibilityColor = (effect: string | null | undefined) => {
     switch (effect) {
       case "Decrease":
-        return "text-success bg-success/10"
+        return "text-success bg-success/10";
       case "Neutral":
-        return "text-primary bg-primary/10"
+        return "text-primary bg-primary/10";
       case "Increase":
-        return "text-destructive bg-destructive/10"
+        return "text-destructive bg-destructive/10";
       default:
-        return "text-muted-foreground bg-muted/10"
+        return "text-muted-foreground bg-muted/10";
     }
-  }
+  };
 
-  const getConstitutionDoshaEffect = (food: Food, dosha: 'vata' | 'pitta' | 'kapha') => {
-    const effect = food[`${dosha}_effect`]
-    return effect || 'N/A'
-  }
+  const getConstitutionDoshaEffect = (
+    food: Food,
+    dosha: "vata" | "pitta" | "kapha"
+  ) => {
+    const effect = food[`${dosha}_effect`];
+    return effect || "N/A";
+  };
 
   const calculateDoshaBalance = () => {
-    const allFoods = meals.flatMap((meal) => meal.foods)
-    if (allFoods.length === 0 || !selectedPatient) return { vata: 33, pitta: 33, kapha: 34 }
+    const allFoods = meals.flatMap((meal) => meal.foods);
+    if (allFoods.length === 0 || !selectedPatient)
+      return { vata: 33, pitta: 33, kapha: 34 };
 
     const doshaScores = allFoods.reduce(
       (acc, food) => {
         const getScore = (effect: string | undefined) => {
           switch (effect) {
             case "Decrease":
-              return 3
+              return 3;
             case "Neutral":
-              return 2
+              return 2;
             case "Increase":
-              return 1
+              return 1;
             default:
-              return 2
+              return 2;
           }
-        }
-        
+        };
+
         return {
           vata: acc.vata + getScore(food.vata_effect),
           pitta: acc.pitta + getScore(food.pitta_effect),
           kapha: acc.kapha + getScore(food.kapha_effect),
-        }
+        };
       },
-      { vata: 0, pitta: 0, kapha: 0 },
-    )
+      { vata: 0, pitta: 0, kapha: 0 }
+    );
 
-    const total = doshaScores.vata + doshaScores.pitta + doshaScores.kapha
-    if(total === 0) return { vata: 33, pitta: 33, kapha: 34 }
+    const total = doshaScores.vata + doshaScores.pitta + doshaScores.kapha;
+    if (total === 0) return { vata: 33, pitta: 33, kapha: 34 };
 
     return {
       vata: Math.round((doshaScores.vata / total) * 100),
       pitta: Math.round((doshaScores.pitta / total) * 100),
       kapha: Math.round((doshaScores.kapha / total) * 100),
-    }
-  }
+    };
+  };
 
-  const dayNutrition = calculateDayNutrition()
-  const doshaBalance = calculateDoshaBalance()
+  const dayNutrition = calculateDayNutrition();
+  const doshaBalance = calculateDoshaBalance();
 
   if (loading) {
     return (
@@ -375,7 +417,7 @@ export function MealPlanner() {
           <p className="text-muted-foreground">Loading meal planner...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -386,7 +428,7 @@ export function MealPlanner() {
           <p>{error}</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -396,13 +438,20 @@ export function MealPlanner() {
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-foreground">Meal Planner</h1>
+              <h1 className="text-2xl font-serif font-bold text-foreground">
+                Meal Planner
+              </h1>
               <p className="text-muted-foreground">
-                Create personalized meal plans for {selectedPatient?.name || 'a patient'}
+                Create personalized meal plans for{" "}
+                {selectedPatient?.name || "a patient"}
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleSavePlan} disabled={isSubmitting || !selectedPatient}>
+              <Button
+                variant="outline"
+                onClick={handleSavePlan}
+                disabled={isSubmitting || !selectedPatient}
+              >
                 <Save className="h-4 w-4 mr-2" />
                 {isSubmitting ? "Saving..." : "Save Plan"}
               </Button>
@@ -415,13 +464,18 @@ export function MealPlanner() {
 
           {/* Patient Info */}
           <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-            <Select onValueChange={handlePatientSelect} value={selectedPatient?.id || ""}>
+            <Select
+              onValueChange={handlePatientSelect}
+              value={selectedPatient?.id || ""}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select a patient" />
               </SelectTrigger>
               <SelectContent>
-                {patients.map(patient => (
-                  <SelectItem key={patient.id} value={patient.id}>{patient.name}</SelectItem>
+                {patients.map((patient) => (
+                  <SelectItem key={patient.id} value={patient.id}>
+                    {patient.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -430,12 +484,20 @@ export function MealPlanner() {
               <>
                 <div className="flex items-center gap-2">
                   <Calculator className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Target: {selectedPatient.bmi} cal (placeholder)</span>
+                  <span className="text-sm">
+                    Target: {selectedPatient.bmi} cal (placeholder)
+                  </span>
                 </div>
                 <div className="flex gap-1">
-                  <Badge className="text-xs bg-primary/10 text-primary">V: {selectedPatient.vata_percentage}%</Badge>
-                  <Badge className="text-xs bg-secondary/10 text-secondary">P: {selectedPatient.pitta_percentage}%</Badge>
-                  <Badge className="text-xs bg-accent/10 text-accent">K: {selectedPatient.kapha_percentage}%</Badge>
+                  <Badge className="text-xs bg-primary/10 text-primary">
+                    V: {selectedPatient.vata_percentage}%
+                  </Badge>
+                  <Badge className="text-xs bg-secondary/10 text-secondary">
+                    P: {selectedPatient.pitta_percentage}%
+                  </Badge>
+                  <Badge className="text-xs bg-accent/10 text-accent">
+                    K: {selectedPatient.kapha_percentage}%
+                  </Badge>
                 </div>
               </>
             )}
@@ -447,8 +509,10 @@ export function MealPlanner() {
         <div className="flex h-[calc(100vh-200px)]">
           {/* Available Foods Sidebar */}
           <div className="w-80 border-r border-border bg-accent p-4 flex flex-col h-full">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Available Foods</h3>
-            
+            <h3 className="text-lg font-semibold text-foreground mb-4">
+              Available Foods
+            </h3>
+
             {/* Search Section */}
             <div className="mb-4 space-y-2">
               <div className="flex gap-2">
@@ -469,8 +533,8 @@ export function MealPlanner() {
                     disabled={searching}
                   />
                 </div>
-                <Button 
-                  onClick={handleSearch} 
+                <Button
+                  onClick={handleSearch}
                   disabled={!searchTerm.trim() || searching}
                   size="sm"
                 >
@@ -483,7 +547,9 @@ export function MealPlanner() {
             {searchResults.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-foreground">Search Results</h4>
+                  <h4 className="text-sm font-medium text-foreground">
+                    Search Results
+                  </h4>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -503,10 +569,14 @@ export function MealPlanner() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-sm">{food.name}</p>
-                          <p className="text-xs text-muted-foreground">{food.category}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {food.category}
+                          </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-medium">{food.calories_per_100g} cal</p>
+                          <p className="text-xs font-medium">
+                            {food.calories_per_100g} cal
+                          </p>
                           <Plus className="h-3 w-3 text-muted-foreground" />
                         </div>
                       </div>
@@ -518,17 +588,25 @@ export function MealPlanner() {
                 </p>
               </div>
             )}
-            
+
             <div className="flex-1 overflow-y-auto">
               <Droppable droppableId="available-foods">
                 {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-2 ${snapshot.isDraggingOver ? "bg-muted/50 rounded-lg p-2" : ""}`}
+                    className={`space-y-2 ${
+                      snapshot.isDraggingOver
+                        ? "bg-muted/50 rounded-lg p-2"
+                        : ""
+                    }`}
                   >
                     {availableFoods.map((food, index) => (
-                      <Draggable key={food.id} draggableId={food.id} index={index}>
+                      <Draggable
+                        key={food.id}
+                        draggableId={food.id}
+                        index={index}
+                      >
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
@@ -540,17 +618,39 @@ export function MealPlanner() {
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div>
-                                <h4 className="font-medium text-sm">{food.name}</h4>
-                                <p className="text-xs text-muted-foreground">{food.category}</p>
+                                <h4 className="font-medium text-sm">
+                                  {food.name}
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {food.category}
+                                </p>
                               </div>
                               <Badge variant="secondary" className="text-xs">
                                 {food.calories_per_100g} cal
                               </Badge>
                             </div>
                             <div className="flex gap-1">
-                              <Badge className={`text-xs ${getCompatibilityColor(food.vata_effect)}`}>V</Badge>
-                              <Badge className={`text-xs ${getCompatibilityColor(food.pitta_effect)}`}>P</Badge>
-                              <Badge className={`text-xs ${getCompatibilityColor(food.kapha_effect)}`}>K</Badge>
+                              <Badge
+                                className={`text-xs ${getCompatibilityColor(
+                                  food.vata_effect
+                                )}`}
+                              >
+                                V
+                              </Badge>
+                              <Badge
+                                className={`text-xs ${getCompatibilityColor(
+                                  food.pitta_effect
+                                )}`}
+                              >
+                                P
+                              </Badge>
+                              <Badge
+                                className={`text-xs ${getCompatibilityColor(
+                                  food.kapha_effect
+                                )}`}
+                              >
+                                K
+                              </Badge>
                             </div>
                           </div>
                         )}
@@ -567,8 +667,11 @@ export function MealPlanner() {
           <div className="flex-1 p-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
               {meals.map((meal) => {
-                const mealNutrition = calculateMealNutrition(meal.foods)
-                const calorieProgress = selectedPatient ? (mealNutrition.calories / (selectedPatient.bmi || 1500)) * 100 : 0;
+                const mealNutrition = calculateMealNutrition(meal.foods);
+                const calorieProgress = selectedPatient
+                  ? (mealNutrition.calories / (selectedPatient.bmi || 1500)) *
+                    100
+                  : 0;
 
                 return (
                   <Card key={meal.id} className="medical-card">
@@ -583,9 +686,13 @@ export function MealPlanner() {
                         </div>
                         <div className="text-right">
                           <div className="text-sm font-medium">
-                            {Math.round(mealNutrition.calories)} / {meal.targetCalories} cal
+                            {Math.round(mealNutrition.calories)} /{" "}
+                            {meal.targetCalories} cal
                           </div>
-                          <Progress value={Math.min(calorieProgress, 100)} className="w-20 h-2 mt-1" />
+                          <Progress
+                            value={Math.min(calorieProgress, 100)}
+                            className="w-20 h-2 mt-1"
+                          />
                         </div>
                       </div>
                     </CardHeader>
@@ -612,34 +719,66 @@ export function MealPlanner() {
                             )}
 
                             {meal.foods.map((food, index) => (
-                              <Draggable key={`${food.id}-${index}`} draggableId={`${food.id}-${index}`} index={index}>
+                              <Draggable
+                                key={`${food.id}-${index}`}
+                                draggableId={`${food.id}-${index}`}
+                                index={index}
+                              >
                                 {(provided, snapshot) => (
                                   <div
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
                                     {...provided.dragHandleProps}
                                     className={`bg-surface border border-border rounded-lg p-3 cursor-grab active:cursor-grabbing ${
-                                      snapshot.isDragging ? "shadow-lg rotate-1" : ""
+                                      snapshot.isDragging
+                                        ? "shadow-lg rotate-1"
+                                        : ""
                                     }`}
                                   >
                                     <div className="flex items-start justify-between">
                                       <div className="flex-1">
-                                        <h5 className="font-medium text-sm">{food.name}</h5>
+                                        <h5 className="font-medium text-sm">
+                                          {food.name}
+                                        </h5>
                                         <p className="text-xs text-muted-foreground">
                                           {/* Use a fixed quantity for calculation and display */}
-                                          100g • {Math.round(food.calories_per_100g || 0)} cal
+                                          100g •{" "}
+                                          {Math.round(
+                                            food.calories_per_100g || 0
+                                          )}{" "}
+                                          cal
                                         </p>
                                         <div className="flex gap-1 mt-1">
                                           {/* Use actual dosha effects from the food object */}
-                                          <Badge className={`text-xs ${getCompatibilityColor(food.vata_effect)}`}>V</Badge>
-                                          <Badge className={`text-xs ${getCompatibilityColor(food.pitta_effect)}`}>P</Badge>
-                                          <Badge className={`text-xs ${getCompatibilityColor(food.kapha_effect)}`}>K</Badge>
+                                          <Badge
+                                            className={`text-xs ${getCompatibilityColor(
+                                              food.vata_effect
+                                            )}`}
+                                          >
+                                            V
+                                          </Badge>
+                                          <Badge
+                                            className={`text-xs ${getCompatibilityColor(
+                                              food.pitta_effect
+                                            )}`}
+                                          >
+                                            P
+                                          </Badge>
+                                          <Badge
+                                            className={`text-xs ${getCompatibilityColor(
+                                              food.kapha_effect
+                                            )}`}
+                                          >
+                                            K
+                                          </Badge>
                                         </div>
                                       </div>
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => removeFoodFromMeal(meal.id, index)}
+                                        onClick={() =>
+                                          removeFoodFromMeal(meal.id, index)
+                                        }
                                         className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                                       >
                                         <Trash2 className="h-3 w-3" />
@@ -655,7 +794,7 @@ export function MealPlanner() {
                       </Droppable>
                     </CardContent>
                   </Card>
-                )
+                );
               })}
             </div>
 
@@ -667,31 +806,57 @@ export function MealPlanner() {
               <CardContent>
                 <Tabs defaultValue="nutrition" className="space-y-4">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="nutrition">Modern Nutrition</TabsTrigger>
-                    <TabsTrigger value="ayurvedic">Ayurvedic Balance</TabsTrigger>
+                    <TabsTrigger value="nutrition">
+                      Modern Nutrition
+                    </TabsTrigger>
+                    <TabsTrigger value="ayurvedic">
+                      Ayurvedic Balance
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="nutrition" className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-4 bg-muted/30 rounded-lg">
-                        <div className="text-2xl font-bold text-primary">{Math.round(dayNutrition.calories)}</div>
-                        <div className="text-sm text-muted-foreground">Calories</div>
+                        <div className="text-2xl font-bold text-primary">
+                          {Math.round(dayNutrition.calories)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Calories
+                        </div>
                         <Progress
-                          value={selectedPatient ? (dayNutrition.calories / (selectedPatient.bmi || 1500)) * 100 : 0}
+                          value={
+                            selectedPatient
+                              ? (dayNutrition.calories /
+                                  (selectedPatient.bmi || 1500)) *
+                                100
+                              : 0
+                          }
                           className="mt-2"
                         />
                       </div>
                       <div className="text-center p-4 bg-muted/30 rounded-lg">
-                        <div className="text-2xl font-bold text-secondary">{Math.round(dayNutrition.protein)}</div>
-                        <div className="text-sm text-muted-foreground">Protein (g)</div>
+                        <div className="text-2xl font-bold text-secondary">
+                          {Math.round(dayNutrition.protein)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Protein (g)
+                        </div>
                       </div>
                       <div className="text-center p-4 bg-muted/30 rounded-lg">
-                        <div className="text-2xl font-bold text-accent">{Math.round(dayNutrition.carbs)}</div>
-                        <div className="text-sm text-muted-foreground">Carbs (g)</div>
+                        <div className="text-2xl font-bold text-accent">
+                          {Math.round(dayNutrition.carbs)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Carbs (g)
+                        </div>
                       </div>
                       <div className="text-center p-4 bg-muted/30 rounded-lg">
-                        <div className="text-2xl font-bold text-warning">{Math.round(dayNutrition.fat)}</div>
-                        <div className="text-sm text-muted-foreground">Fat (g)</div>
+                        <div className="text-2xl font-bold text-warning">
+                          {Math.round(dayNutrition.fat)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Fat (g)
+                        </div>
                       </div>
                     </div>
                   </TabsContent>
@@ -699,38 +864,58 @@ export function MealPlanner() {
                   <TabsContent value="ayurvedic" className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <h4 className="font-medium text-foreground mb-3">Dosha Balance</h4>
+                        <h4 className="font-medium text-foreground mb-3">
+                          Dosha Balance
+                        </h4>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <span className="text-sm">Vata</span>
-                            <span className="text-sm font-medium">{doshaBalance.vata}%</span>
+                            <span className="text-sm font-medium">
+                              {doshaBalance.vata}%
+                            </span>
                           </div>
                           <Progress value={doshaBalance.vata} className="h-2" />
 
                           <div className="flex items-center justify-between">
                             <span className="text-sm">Pitta</span>
-                            <span className="text-sm font-medium">{doshaBalance.pitta}%</span>
+                            <span className="text-sm font-medium">
+                              {doshaBalance.pitta}%
+                            </span>
                           </div>
-                          <Progress value={doshaBalance.pitta} className="h-2" />
+                          <Progress
+                            value={doshaBalance.pitta}
+                            className="h-2"
+                          />
 
                           <div className="flex items-center justify-between">
                             <span className="text-sm">Kapha</span>
-                            <span className="text-sm font-medium">{doshaBalance.kapha}%</span>
+                            <span className="text-sm font-medium">
+                              {doshaBalance.kapha}%
+                            </span>
                           </div>
-                          <Progress value={doshaBalance.kapha} className="h-2" />
+                          <Progress
+                            value={doshaBalance.kapha}
+                            className="h-2"
+                          />
                         </div>
                       </div>
 
                       <div>
-                        <h4 className="font-medium text-foreground mb-3">Constitutional Compatibility</h4>
+                        <h4 className="font-medium text-foreground mb-3">
+                          Constitutional Compatibility
+                        </h4>
                         <div className="space-y-2">
                           <div className="flex items-center justify-between p-2 bg-success/10 rounded">
                             <span className="text-sm">Perfect for Pitta</span>
-                            <Badge className="text-xs bg-success/20 text-success">Excellent</Badge>
+                            <Badge className="text-xs bg-success/20 text-success">
+                              Excellent
+                            </Badge>
                           </div>
                           <div className="flex items-center justify-between p-2 bg-warning/10 rounded">
                             <span className="text-sm">PCOS Support</span>
-                            <Badge className="text-xs bg-warning/20 text-warning">Good</Badge>
+                            <Badge className="text-xs bg-warning/20 text-warning">
+                              Good
+                            </Badge>
                           </div>
                         </div>
                       </div>
@@ -743,5 +928,5 @@ export function MealPlanner() {
         </div>
       </DragDropContext>
     </div>
-  )
+  );
 }
