@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/universal";
-import { getEnhancedFoodImageUrl } from "@/lib/utils/food-images";
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -109,9 +108,6 @@ async function addFoodToDatabase(foodData: FoodData): Promise<string | null> {
   try {
     const supabase = await createClient();
 
-    // Generate image URL for the food
-    const imageUrl = getEnhancedFoodImageUrl(foodData.name);
-
     const { data, error } = await supabase
       .from("foods")
       .insert([
@@ -134,7 +130,6 @@ async function addFoodToDatabase(foodData: FoodData): Promise<string | null> {
           best_time: foodData.best_time,
           benefits: foodData.benefits,
           contraindications: foodData.contraindications,
-          image_url: imageUrl,
         },
       ])
       .select("id")

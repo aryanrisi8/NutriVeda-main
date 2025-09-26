@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
-import { Plus, Trash2, Clock, Users, Calculator, Save, FileText, AlertCircle } from "lucide-react"
+import { Plus, Trash2, Clock, Users, Calculator, Save, FileText, AlertCircle, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getFoods, type Food } from "@/lib/database/foods"
+import { Input } from "@/components/ui/input"
+import { getFoods, searchFoodsWithGemini } from "@/lib/database/foods"
+import type { Food } from "@/lib/database/types"
 import { getAllPatients, type Patient } from "@/lib/database/patients"
 import { createMealPlan } from "@/lib/database/meal-plans"
 import { useToast } from "@/hooks/use-toast"
@@ -56,6 +58,9 @@ export function MealPlanner() {
   const [error, setError] = useState<string | null>(null)
   const [meals, setMeals] = useState<MealSlot[]>(initialMeals)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [searching, setSearching] = useState(false)
+  const [searchResults, setSearchResults] = useState<Food[]>([])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -81,6 +86,67 @@ export function MealPlanner() {
   const handlePatientSelect = (patientId: string) => {
     const patient = patients.find(p => p.id === patientId)
     setSelectedPatient(patient || null)
+  }
+
+  const handleSearch = async () => {
+    if (!searchTerm.trim()) return
+
+    try {
+      setSearching(true)
+      const results = await searchFoodsWithGemini(searchTerm.trim())
+      
+      // Set search results for display
+      setSearchResults(results)
+      
+      if (results.length > 0) {
+        toast({
+          title: "Search Complete", 
+          description: `Found ${results.length} food item(s). Click to add to available foods.`,
+        })
+      } else {
+        toast({
+          title: "No Results",
+          description: "No food items found for your search",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Failed to search foods:", error)
+      toast({
+        title: "Search Failed",
+        description: "Unable to search for foods. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      handleSearch()
+    }
+  }
+
+  const addFoodFromSearch = (food: Food) => {
+    // Check if food already exists in available foods
+    const exists = availableFoods.some(item => item.id === food.id)
+    if (!exists) {
+      setAvailableFoods(prev => [...prev, food])
+    }
+    
+    // Remove from search results after adding
+    setSearchResults(prev => prev.filter(item => item.id !== food.id))
+    
+    toast({
+      title: "Food Added",
+      description: `${food.name} has been added to available foods`,
+    })
+  }
+
+  const clearSearchResults = () => {
+    setSearchResults([])
+    setSearchTerm("")
   }
 
   const handleDragEnd = (result: DropResult) => {
@@ -185,7 +251,7 @@ export function MealPlanner() {
           fat_g: food.fat_g || 0,
         }))
         return acc
-      }, {})
+      }, {} as Record<string, MealPlanFoodItem[]>)
 
       const mealPlanData = {
         patient_id: selectedPatient.id,
@@ -382,6 +448,77 @@ export function MealPlanner() {
           {/* Available Foods Sidebar */}
           <div className="w-80 border-r border-border bg-accent p-4 flex flex-col h-full">
             <h3 className="text-lg font-semibold text-foreground mb-4">Available Foods</h3>
+            
+            {/* Search Section */}
+            <div className="mb-4 space-y-2">
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  {searching ? (
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    </div>
+                  ) : (
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  )}
+                  <Input
+                    placeholder="Search foods... (Press Enter to search)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="pl-10"
+                    disabled={searching}
+                  />
+                </div>
+                <Button 
+                  onClick={handleSearch} 
+                  disabled={!searchTerm.trim() || searching}
+                  size="sm"
+                >
+                  {searching ? "Searching..." : "Search"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Search Results Section */}
+            {searchResults.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-foreground">Search Results</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSearchResults}
+                    className="h-6 text-xs"
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2 bg-background">
+                  {searchResults.map((food) => (
+                    <div
+                      key={food.id}
+                      className="p-2 rounded border hover:bg-accent cursor-pointer transition-colors"
+                      onClick={() => addFoodFromSearch(food)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{food.name}</p>
+                          <p className="text-xs text-muted-foreground">{food.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-medium">{food.calories_per_100g} cal</p>
+                          <Plus className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click any food item to add it to your available foods list
+                </p>
+              </div>
+            )}
+            
             <div className="flex-1 overflow-y-auto">
               <Droppable droppableId="available-foods">
                 {(provided, snapshot) => (

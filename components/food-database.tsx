@@ -225,15 +225,6 @@ export function FoodDatabase() {
           {filteredFoods.map((food) => (
             <Card key={food.id} className="medical-card hover:shadow-lg transition-shadow cursor-pointer">
               <CardHeader className="pb-3">
-                <div className="aspect-square rounded-lg overflow-hidden mb-3">
-                  <img
-                    src={
-                      food.image_url || "/placeholder.svg?height=200&width=200&query=" + encodeURIComponent(food.name)
-                    }
-                    alt={food.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg font-medium">{food.name}</CardTitle>
