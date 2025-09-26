@@ -93,3 +93,25 @@ export async function getFoodCategories(): Promise<string[]> {
   const categories = [...new Set(data?.map((item) => item.category) || [])]
   return categories
 }
+
+export async function searchFoodsWithGemini(query: string): Promise<Food[]> {
+  try {
+    const response = await fetch('/api/food-search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ searchTerm: query }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to search foods')
+    }
+
+    const data = await response.json()
+    return data.foods || []
+  } catch (error) {
+    console.error("Error searching foods with Gemini:", error)
+    throw new Error("Failed to search foods")
+  }
+}

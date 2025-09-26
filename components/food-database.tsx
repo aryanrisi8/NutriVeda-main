@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { type Food, getFoods, getFoodCategories } from "@/lib/database/foods"
+import { type Food, getFoods, getFoodCategories, searchFoodsWithGemini } from "@/lib/database/foods"
 
 const constitutions = ["All", "Vata", "Pitta", "Kapha"]
 const seasons = ["All", "Spring", "Summer", "Monsoon", "Autumn", "Winter"]
@@ -16,6 +16,7 @@ export function FoodDatabase() {
   const [foodItems, setFoodItems] = useState<Food[]>([])
   const [categories, setCategories] = useState<string[]>(["All"])
   const [loading, setLoading] = useState(true)
+  const [searching, setSearching] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedConstitution, setSelectedConstitution] = useState("All")
@@ -26,6 +27,12 @@ export function FoodDatabase() {
     loadFoodItems()
     loadCategories()
   }, [])
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      handleSearch(searchTerm.trim())
+    }
+  }
 
   const loadFoodItems = async () => {
     try {
@@ -48,11 +55,38 @@ export function FoodDatabase() {
     }
   }
 
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) return
+
+    try {
+      setSearching(true)
+      const searchResults = await searchFoodsWithGemini(query)
+      
+      // Merge search results with existing food items (avoid duplicates)
+      setFoodItems(prevItems => {
+        const existingIds = new Set(prevItems.map(item => item.id))
+        const newItems = searchResults.filter(item => !existingIds.has(item.id))
+        return [...prevItems, ...newItems]
+      })
+      
+      // Update categories if new ones were found
+      const newCategories = [...new Set([
+        ...categories.filter(cat => cat !== "All"),
+        ...searchResults.map(food => food.category)
+      ])]
+      setCategories(["All", ...newCategories])
+    } catch (error) {
+      console.error("Failed to search foods:", error)
+    } finally {
+      setSearching(false)
+    }
+  }
+
   const filteredFoods = foodItems.filter((food) => {
     const matchesSearch =
       food.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       food.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      food.benefits?.some((benefit) => benefit.toLowerCase().includes(searchTerm.toLowerCase()))
+      food.benefits?.some((benefit: string) => benefit.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesCategory = selectedCategory === "All" || food.category === selectedCategory
     const matchesSeason = selectedSeason === "All" || (food.best_season && food.best_season.includes(selectedSeason))
@@ -96,28 +130,31 @@ export function FoodDatabase() {
       {/* Header */}
       <div className="border-b border-border bg-surface">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <div>
               <h1 className="text-2xl font-serif font-bold text-foreground">Food Database</h1>
               <p className="text-muted-foreground">
                 Discover foods with their Ayurvedic properties and nutritional values
               </p>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Food Item
-            </Button>
           </div>
 
           {/* Search and Filters */}
           <div className="space-y-4">
             <div className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                {searching ? (
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                )}
                 <Input
-                  placeholder="Search foods, benefits, or conditions..."
+                  placeholder="Search foods, benefits, or conditions... (Press Enter to search)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   className="pl-10"
                 />
               </div>
@@ -184,12 +221,6 @@ export function FoodDatabase() {
 
       {/* Food Grid */}
       <div className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {filteredFoods.length} of {foodItems.length} foods
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredFoods.map((food) => (
             <Card key={food.id} className="medical-card hover:shadow-lg transition-shadow cursor-pointer">
@@ -277,7 +308,7 @@ export function FoodDatabase() {
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-foreground">Key Benefits</h4>
                     <div className="flex flex-wrap gap-1">
-                      {food.benefits.slice(0, 3).map((benefit, index) => (
+                      {food.benefits.slice(0, 3).map((benefit: string, index: number) => (
                         <Badge key={index} variant="outline" className="text-xs">
                           {benefit}
                         </Badge>
@@ -294,9 +325,14 @@ export function FoodDatabase() {
           ))}
         </div>
 
-        {filteredFoods.length === 0 && (
+        {filteredFoods.length === 0 && !searching && (
           <div className="text-center py-12">
-            <div className="text-muted-foreground mb-2">No foods found matching your criteria</div>
+            <div className="text-muted-foreground mb-2">
+              {searchTerm.trim() 
+                ? "Try adjusting your search or filters" 
+                : "No foods found matching your criteria"
+              }
+            </div>
             <Button
               variant="outline"
               onClick={() => {
@@ -308,6 +344,13 @@ export function FoodDatabase() {
             >
               Clear Filters
             </Button>
+          </div>
+        )}
+
+        {searching && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Searching for foods...</p>
           </div>
         )}
       </div>
