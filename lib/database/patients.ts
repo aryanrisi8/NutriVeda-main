@@ -14,6 +14,7 @@ export interface Patient {
   last_visit?: string | null
   next_appointment?: string | null
   bmi?: number | null
+  blood_pressure?: string | null
   medical_conditions: string[] | null
   dietary_restrictions: string[] | null
   current_medications: string[] | null
@@ -36,6 +37,8 @@ export interface CreatePatientData {
   email?: string
   address?: string
   condition?: string
+  bmi?: number
+  blood_pressure?: string
   medical_conditions?: string[]
   dietary_restrictions?: string[]
   current_medications?: string[]

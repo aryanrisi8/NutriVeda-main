@@ -18,16 +18,14 @@ export default async function ProtectedLayout({
     redirect("/auth/login")
   }
 
+  const ChatWidget = dynamic(() => import("@/components/chat-widget"), { ssr: false })
+
   // Use the DashboardLayout component to wrap all protected pages.
   return (
     <>
       <DashboardLayout>{children}</DashboardLayout>
       {/* Client-only chat widget */}
-      {(() => {
-        const ChatWidget = dynamic(() => import("@/components/chat-widget"), { ssr: false })
-        // @ts-expect-error Server Component wrapper rendering client component
-        return <ChatWidget />
-      })()}
+      <ChatWidget />
     </>
   )
 }

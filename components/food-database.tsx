@@ -13,12 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  type Food,
-  getFoods,
-  getFoodCategories,
-  searchFoodsWithGemini,
-} from "@/lib/database/foods";
+import type { Food } from "@/lib/database/types";
+import { getFoods, getFoodCategories, searchFoodsWithGemini } from "@/lib/database/foods";
 
 const constitutions = ["All", "Vata", "Pitta", "Kapha"];
 const seasons = ["All", "Spring", "Summer", "Monsoon", "Autumn", "Winter"];

@@ -88,7 +88,7 @@ export function PatientManagement() {
     return matchesSearch && matchesStatus && matchesCondition
   })
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string | null) => {
     switch (status) {
       case "active":
         return "bg-success/10 text-success"
@@ -243,7 +243,7 @@ export function PatientManagement() {
                       </p>
                     </div>
                   </div>
-                  <Badge className={getStatusColor(patient.status)}>{patient.status}</Badge>
+                  <Badge className={getStatusColor(patient.status)}>{patient.status || "Unknown"}</Badge>
                 </div>
               </CardHeader>
 
